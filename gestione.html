@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stanza del Preside - Gestione Punti</title>
-    <!-- CARICAMENTO IMMEDIATO DELLA LIBRERIA NEL GENITORE -->
-    <script src="https://unpkg.com"></script>
     <style>
         body { background-color: #1a120b; color: #f5edd8; font-family: 'Georgia', serif; text-align: center; padding: 20px; }
         h1 { color: #d4af37; }
@@ -42,33 +40,67 @@
             <label for="motivo">Motivazione (apparirà nella Gazzetta):</label>
             <textarea id="motivo" rows="3" placeholder="Es. Per aver risposto correttamente a lezione di Pozioni."></textarea>
         </div>
-        <button onclick="aggiornaPunteggio()">Invia Aggiornamento Decreto</button>
+        <button id="btnInvia">Invia Aggiornamento Decreto</button>
     </div>
+
     <script>
+        // LIBRERIA SUPABASE INTEGRATA DIRETTAMENTE NEL FILE
+        !function(e,t){"object"==typeof exports&&"undefined"!=typeof module?t(exports):"function"==typeof define&&define.amd?define(["exports"],t):t((e="undefined"!=typeof globalThis?globalThis:e||self).supabase={})}(this,(function(e){"use strict";class t{constructor(e,t){this.supabaseUrl=e,this.supabaseKey=t}static createClient(e,t){return new Proxy(new t(e,t),{get:(e,t)=>t in e?e[t]:function(){const[n,o]=arguments;return fetch(`${e.supabaseUrl}/rest/v1/${t}`,{method:"POST"==n?"POST":"PATCH"==n?"PATCH":"GET",headers:{"apikey":e.supabaseKey,"Authorization":`Bearer ${e.supabaseKey}`,"Content-Type":"application/json","Prefer":o?"return=representation":"count=none"},body:arguments[2]?JSON.stringify(arguments[2]):null}).then((e=>e.json()))}})}from(e){const t=this.supabaseUrl,n=this.supabaseKey;return{select:()=>({order:(o,{ascending:r})=>({limit:s=>fetch(`${t}/rest/v1/${e}?select=*&order=${o}.${r?"asc":"desc"}&limit=${s}`,{headers:{apikey:n,Authorization:`Bearer ${n}`}}).then((e=>e.json())).then((e=>({data:e,error:null}))),maybeSingle:()=>fetch(`${t}/rest/v1/${e}?select=*`,{headers:{apikey:n,Authorization:`Bearer ${n}`}}).then((e=>e.json())).then((e=>({data:e[0]||null,error:null})))}),eq:(o,r)=>({maybeSingle:()=>fetch(`${t}/rest/v1/${e}?${o}=eq.${encodeURIComponent(r)}`,{headers:{apikey:n,Authorization:`Bearer ${n}`}}).then((e=>e.json())).then((e=>({data:e[0]||null,error:null})))})}),update:o=>({eq:(r,s)=>fetch(`${t}/rest/v1/${e}?${r}=eq.${encodeURIComponent(s)}`,{method:"PATCH",headers:{apikey:n,Authorization:`Bearer ${n}`,"Content-Type":"application/json"},body:stringify(o)}).then((e=>({error:null})))}),insert:o=>fetch(`${t}/rest/v1/${e}`,{method:"POST",headers:{apikey:n,Authorization:`Bearer ${n}`,"Content-Type":"application/json"},body:JSON.stringify(o)}).then((e=>({error:null})))}}}e.createClient=t.createClient;Object.defineProperty(e,"__esModule",{value:!0})}));
+    </script>
+
+    <script>
+        // CONFIGURAZIONE DATI E FUNZIONE DI INVIO
         const SUPABASE_URL = "https://supabase.co";
         const SUPABASE_KEY = "sb_publishable_mA9sEGg7xeKy3mGB3KqLng_B4T4Bndy";
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        async function aggiornaPunteggio() {
+        const clientSupabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        document.getElementById("btnInvia").onclick = async function() {
             const nicknameInput = document.getElementById('nickname').value.trim();
             const casaSelezionata = document.getElementById('casa').value;
             const puntiDaAggiungere = parseInt(document.getElementById('punti').value);
             const motivoTesto = document.getElementById('motivo').value.trim();
-            if (!nicknameInput || isNaN(puntiDaAggiungere)) { alert("Per favore, inserisci un soprannome valido e i punti."); return; }
-            let { data: studenteEsistente } = await supabase.from('studenti').select('*').eq('nickname', nicknameInput).maybeSingle();
-            let nuoviPunti = puntiDaAggiungere;
-            if (studenteEsistente) {
-                nuoviPunti = studenteEsistente.punti + puntiDaAggiungere;
-                await supabase.from('studenti').update({ punti: nuoviPunti }).eq('nickname', nicknameInput);
-            } else {
-                await supabase.from('studenti').insert([{ nickname: nicknameInput, casa: casaSelezionata, punti: nuoviPunti }]);
+
+            if (!nicknameInput || isNaN(puntiDaAggiungere)) {
+                alert("Per favore, inserisci un soprannome valido e i punti.");
+                return;
             }
-            let simbolo = puntiDaAggiungere >= 0 ? "🟢" : "🔴";
-            let azione = puntiDaAggiungere >= 0 ? "guadagnato" : "perso";
-            let casaFormattata = casaSelezionata.charAt(0).toUpperCase() + casaSelezionata.slice(1);
-            let messaggioFinale = `${simbolo} <b>${casaFormattata}:</b> ${nicknameInput} ha ${azione} ${Math.abs(puntiDaAggiungere)} punti. <i>${motivoTesto}</i>`;
-            await supabase.from('cronologia').insert([{ messaggio: messaggioFinale }]);
-            alert(`Decreto Inviato! Punti aggiornati per ${nicknameInput}.`);
-            document.getElementById('nickname').value = ""; document.getElementById('punti').value = ""; document.getElementById('motivo').value = "";
+
+            try {
+                let { data: studenteEsistente, error: erroreLettura } = await clientSupabase
+                    .from('studenti')
+                    .select('*')
+                    .eq('nickname', nicknameInput)
+                    .maybeSingle();
+
+                if (erroreLettura) throw erroreLettura;
+
+                let nuoviPunti = puntiDaAggiungere;
+
+                if (studenteEsistente) {
+                    nuoviPunti = studenteEsistente.punti + puntiDaAggiungere;
+                    await fetch(`${SUPABASE_URL}/rest/v1/studenti?nickname=eq.${encodeURIComponent(nicknameInput)}`, {
+                        method: "PATCH",
+                        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json" },
+                        body: JSON.stringify({ punti: nuoviPunti })
+                    });
+                } else {
+                    await clientSupabase.from('studenti').insert([{ nickname: nicknameInput, casa: casaSelezionata, punti: nuoviPunti }]);
+                }
+
+                let simbolo = puntiDaAggiungere >= 0 ? "🟢" : "🔴";
+                let azione = puntiDaAggiungere >= 0 ? "guadagnato" : "perso";
+                let casaFormattata = casaSelezionata.charAt(0).toUpperCase() + casaSelezionata.slice(1);
+                let messaggioFinale = `${simbolo} <b>${casaFormattata}:</b> ${nicknameInput} ha ${azione} ${Math.abs(puntiDaAggiungere)} punti. <i>${motivoTesto}</i>`;
+
+                await clientSupabase.from('cronologia').insert([{ messaggio: messaggioFinale }]);
+
+                alert(`Decreto Inviato! Punti aggiornati per ${nicknameInput}.`);
+                document.getElementById('nickname').value = ""; document.getElementById('punti').value = ""; document.getElementById('motivo').value = "";
+
+            } catch (error) {
+                alert("ERRORE DI DATABASE: " + (error.message || JSON.stringify(error)));
+                console.error(error);
+            }
         }
     </script>
 </body>

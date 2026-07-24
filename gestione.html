@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Torneo delle Quattro Case - Hogwarts</title>
+    <!-- CARICAMENTO IMMEDIATO DELLA LIBRERIA NEL GENITORE -->
+    <script src="https://unpkg.com"></script>
+    <style>
+        body { background-color: #1a120b; color: #f5edd8; font-family: 'Georgia', serif; text-align: center; margin: 0; padding: 20px; }
+        h1 { color: #d4af37; font-size: 2.5em; text-shadow: 2px 2px 4px #000; margin-bottom: 30px; }
+        .clessidre-container { display: flex; justify-content: space-around; flex-wrap: wrap; max-width: 1200px; margin: 0 auto 40px auto; }
+        .clessidra-card { background: rgba(0, 0, 0, 0.4); border: 2px solid #d4af37; border-radius: 10px; padding: 20px; width: 220px; margin: 10px; box-shadow: 0px 4px 15px rgba(0,0,0,0.5); }
+        .nome-casa { font-size: 1.5em; font-weight: bold; margin-bottom: 10px; }
+        .grifondoro { color: #ae0001; } .serpeverde { color: #2a623d; } .corvonero { color: #222f5e; } .tassorosso { color: #ecb939; }
+        .clessidra-visiva { width: 80px; height: 160px; border: 4px solid #d4af37; border-radius: 10px; margin: 15px auto; position: relative; background: linear-gradient(to bottom, transparent 50%, rgba(255,255,255,0.05) 50%); overflow: hidden; }
+        .gemme { position: absolute; bottom: 0; width: 100%; height: 0%; transition: height 1s ease-in-out; }
+        .grifondoro .gemme { background-color: #ae0001; box-shadow: 0 0 10px #ae0001; }
+        .serpeverde .gemme { background-color: #2a623d; box-shadow: 0 0 10px #2a623d; }
+        .corvonero .gemme { background-color: #222f5e; box-shadow: 0 0 10px #222f5e; }
+        .tassorosso .gemme { background-color: #ecb939; box-shadow: 0 0 10px #ecb939; }
+        .punti-totali { font-size: 1.8em; font-weight: bold; color: #fff; }
+        .classifiche-studenti { display: flex; justify-content: space-around; flex-wrap: wrap; max-width: 1200px; margin: 0 auto; }
+        .lista-studenti { width: 220px; background: rgba(255, 255, 255, 0.05); border-radius: 5px; padding: 15px; margin: 10px; text-align: left; }
+        .lista-studenti h3 { text-align: center; border-bottom: 1px solid #d4af37; padding-bottom: 5px; margin-top: 0; }
+        .studente-item { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px dashed rgba(255,255,255,0.1); }
+        .cronologia-container { max-width: 800px; margin: 40px auto; background: rgba(0,0,0,0.6); border: 1px solid #d4af37; padding: 20px; border-radius: 8px; }
+        .notizia { padding: 10px; border-left: 4px solid #d4af37; margin-bottom: 10px; background: rgba(255,255,255,0.02); text-align: left; }
+    </style>
+</head>
+<body>
+    <h1>🏆 Torneo delle Quattro Case 🏆</h1>
+    <div class="clessidre-container">
+        <div class="clessidra-card grifondoro"><div class="nome-casa">Grifondoro</div><div class="clessidra-visiva"><div class="gemme" id="altezza-grifondoro"></div></div><div class="punti-totali" id="punti-grifondoro">0</div></div>
+        <div class="clessidra-card serpeverde"><div class="nome-casa">Serpeverde</div><div class="clessidra-visiva"><div class="gemme" id="altezza-serpeverde"></div></div><div class="punti-totali" id="punti-serpeverde">0</div></div>
+        <div class="clessidra-card corvonero"><div class="nome-casa">Corvonero</div><div class="clessidra-visiva"><div class="gemme" id="altezza-corvonero"></div></div><div class="punti-totali" id="punti-corvonero">0</div></div>
+        <div class="clessidra-card tassorosso"><div class="nome-casa">Tassorosso</div><div class="clessidra-visiva"><div class="gemme" id="altezza-tassorosso"></div></div><div class="punti-totali" id="punti-tassorosso">0</div></div>
+    </div>
+    <h2>Bacheca degli Studenti</h2>
+    <div class="classifiche-studenti">
+        <div class="lista-studenti"><h3 class="grifondoro">Grifondoro</h3><div id="studenti-grifondoro"></div></div>
+        <div class="lista-studenti"><h3 class="serpeverde">Serpeverde</h3><div id="studenti-serpeverde"></div></div>
+        <div class="lista-studenti"><h3 class="corvonero">Corvonero</h3><div id="studenti-corvonero"></div></div>
+        <div class="lista-studenti"><h3 class="tassorosso">Tassorosso</h3><div id="studenti-tassorosso"></div></div>
+    </div>
+    <div class="cronologia-container">
+        <h2>📜 La Gazzetta di Hogwarts (Ultime Notizie)</h2>
+        <div id="cronologia-messaggi"><div class="notizia">In attesa del primo decreto ministeriale...</div></div>
+    </div>
+    <script>
+        const SUPABASE_URL = "https://supabase.co";
+        const SUPABASE_KEY = "sb_publishable_mA9sEGg7xeKy3mGB3KqLng_B4T4Bndy";
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        async function caricaDatiTorneo() {
+            let { data: studenti, error } = await supabase.from('studenti').select('*').order('punti', { ascending: false });
+            if (error) return console.error(error);
+            let puntiCase = { grifondoro: 0, serpeverde: 0, corvonero: 0, tassorosso: 0 };
+            document.getElementById('studenti-grifondoro').innerHTML = ""; document.getElementById('studenti-serpeverde').innerHTML = ""; document.getElementById('studenti-corvonero').innerHTML = ""; document.getElementById('studenti-tassorosso').innerHTML = "";
+            studenti.forEach(studente => {
+                let casaInMinuscolo = studente.casa.toLowerCase(); puntiCase[casaInMinuscolo] += studente.punti;
+                let divStudente = document.createElement('div'); divStudente.className = 'studente-item'; divStudente.innerHTML = `<span>${studente.nickname}</span><span>${studente.punti} pt</span>`;
+                if(document.getElementById(`studenti-${casaInMinuscolo}`)) { document.getElementById(`studenti-${casaInMinuscolo}`).appendChild(divStudente); }
+            });
+            for (let casa in puntiCase) {
+                if(document.getElementById(`punti-${casa}`)) {
+                    document.getElementById(`punti-${casa}`).innerText = puntiCase[casa];
+                    let altezzaPercentuale = Math.min((puntiCase[casa] / 1000) * 100, 100); document.getElementById(`altezza-${casa}`).style.height = altezzaPercentuale + "%";
+                }
+            }
+            let { data: cronologia } = await supabase.from('cronologia').select('*').order('id', { ascending: false }).limit(10);
+            let boxCronologia = document.getElementById('cronologia-messaggi');
+            if(boxCronologia && cronologia) {
+                boxCronologia.innerHTML = "";
+                cronologia.forEach(notizia => { let divNotizia = document.createElement('div'); divNotizia.className = 'notizia'; divNotizia.innerHTML = noticia.messaggio; boxCronologia.appendChild(divNotizia); });
+            }
+        }
+        caricaDatiTorneo(); setInterval(caricaDatiTorneo, 5000);
+    </script>
+</body>
+</html>

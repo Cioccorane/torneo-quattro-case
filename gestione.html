@@ -44,6 +44,7 @@
     </div>
 
     <script>
+        // URL CORRETTO CON LE LETTERE MAIUSCOLE REALI
         const SUPABASE_URL = "https://supabase.co";
         const SUPABASE_KEY = "sb_publishable_mA9sEGg7xeKy3mGB3KqLng_B4T4Bndy";
 
@@ -58,8 +59,7 @@
                 return;
             }
 
-            // Intestazioni di sicurezza richieste da Supabase per evitare l'errore CORS
-            const headers =\ {
+            const headers = {
                 "apikey": SUPABASE_KEY,
                 "Authorization": `Bearer ${SUPABASE_KEY}`,
                 "Content-Type": "application/json",
@@ -67,7 +67,6 @@
             };
 
             try {
-                // 1. Cerchiamo lo studente nel database
                 const urlLettura = `${SUPABASE_URL}/rest/v1/studenti?nickname=eq.${encodeURIComponent(nicknameInput)}&select=*`;
                 const resLettura = await fetch(urlLettura, { method: "GET", headers: headers });
                 
@@ -77,17 +76,14 @@
                 let nuoviPunti = puntiDaAggiungere;
 
                 if (datiStudente && datiStudente.length > 0) {
-                    // Se esiste, aggiorna i suoi punti
                     nuoviPunti = datiStudente[0].punti + puntiDaAggiungere;
                     const urlUpdate = `${SUPABASE_URL}/rest/v1/studenti?nickname=eq.${encodeURIComponent(nicknameInput)}`;
                     await fetch(urlUpdate, { method: "PATCH", headers: headers, body: JSON.stringify({ punti: nuoviPunti }) });
                 } else {
-                    // Se non esiste, lo inserisce da zero
                     const urlInsert = `${SUPABASE_URL}/rest/v1/studenti`;
                     await fetch(urlInsert, { method: "POST", headers: headers, body: JSON.stringify([{ nickname: nicknameInput, casa: casaSelezionata, punti: nuoviPunti }]) });
                 }
 
-                // 2. Costruiamo e inviamo il messaggio per la cronologia
                 let simbolo = puntiDaAggiungere >= 0 ? "🟢" : "🔴";
                 let action = puntiDaAggiungere >= 0 ? "guadagnato" : "perso";
                 let casaFormattata = casaSelezionata.charAt(0).toUpperCase() + casaSelezionata.slice(1);

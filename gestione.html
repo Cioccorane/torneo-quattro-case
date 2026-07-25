@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stanza del Preside - Gestione Punti</title>
-    <!-- LIBRERIA CLOUDFLARE SICURA -->
-    <script src="https://cloudflare.com"></script>
     <style>
         body { background-color: #1a120b; color: #f5edd8; font-family: 'Georgia', serif; text-align: center; padding: 20px; }
         h1 { color: #d4af37; }
@@ -45,13 +43,14 @@
         <button id="btnInvia">Invia Aggiornamento Decreto</button>
     </div>
 
-    <script>
+    <!-- METODO DI CARICAMENTO LOCALE MEDIANTE MODULO -->
+    <script type="module">
+        import 'https://cloudflare.com';
+
         window.onload = function() {
             const SUPABASE_URL = "https://supabase.co";
             const SUPABASE_KEY = "sb_publishable_mA9sEGg7xeKy3mGB3KqLng_B4T4Bndy";
-            
-            // CORREZIONE: Rimossa la parola window per allinearsi a cdnjs
-            const clientSupabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            const clientSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
             document.getElementById("btnInvia").onclick = async function() {
                 const nicknameInput = document.getElementById('nickname').value.trim();

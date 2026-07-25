@@ -43,71 +43,69 @@
         <button id="btnInvia">Invia Aggiornamento Decreto</button>
     </div>
 
-    <!-- METODO DI CARICAMENTO LOCALE MEDIANTE MODULO -->
+    <!-- SCRIPT CORRETTO CON IMPORT DIRETTO -->
     <script type="module">
-        import 'https://cloudflare.com';
+        import { createClient } from 'https://jsdelivr.net';
 
-        window.onload = function() {
-            const SUPABASE_URL = "https://supabase.co";
-            const SUPABASE_KEY = "sb_publishable_mA9sEGg7xeKy3mGB3KqLng_B4T4Bndy";
-            const clientSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const SUPABASE_URL = "https://supabase.co";
+        const SUPABASE_KEY = "sb_publishable_mA9sEGg7xeKy3mGB3KqLng_B4T4Bndy";
+        const clientSupabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-            document.getElementById("btnInvia").onclick = async function() {
-                const nicknameInput = document.getElementById('nickname').value.trim();
-                const casaSelezionata = document.getElementById('casa').value;
-                const puntiDaAggiungere = parseInt(document.getElementById('punti').value);
-                const motivoTesto = document.getElementById('motivo').value.trim();
+        document.getElementById("btnInvia").onclick = async function() {
+            const nicknameInput = document.getElementById('nickname').value.trim();
+            const casaSelezionata = document.getElementById('casa').value;
+            const puntiDaAggiungere = parseInt(document.getElementById('punti').value);
+            const motivoTesto = document.getElementById('motivo').value.trim();
 
-                if (!nicknameInput || isNaN(puntiDaAggiungere)) {
-                    alert("Per favore, inserisci un soprannome valido e i punti.");
-                    return;
-                }
+            if (!nicknameInput || isNaN(puntiDaAggiungere)) {
+                alert("Per favore, inserisci un soprannome valido e i punti.");
+                return;
+            }
 
-                try {
-                    let { data: studenteEsistente, error: erroreLettura } = await clientSupabase
+            try {
+                let { data: studenteEsistente, error: erroreLettura } = await clientSupabase
+                    .from('studenti')
+                    .select('*')
+                    .eq('nickname', nicknameInput)
+                    .maybeSingle();
+
+                if (erroreLettura) throw erroreLettura;
+
+                let nuoviPunti = puntiDaAggiungere;
+
+                if (studenteEsistente) {
+                    nuoviPunti = studenteEsistente.punti + puntiDaAggiungere;
+                    let { error: erroreUpdate } = await clientSupabase
                         .from('studenti')
-                        .select('*')
-                        .eq('nickname', nicknameInput)
-                        .maybeSingle();
-
-                    if (erroreLettura) throw erroreLettura;
-
-                    let nuoviPunti = puntiDaAggiungere;
-
-                    if (studenteEsistente) {
-                        nuoviPunti = studenteEsistente.punti + puntiDaAggiungere;
-                        let { error: erroreUpdate } = await clientSupabase
-                            .from('studenti')
-                            .update({ punti: nuoviPunti })
-                            .eq('nickname', nicknameInput);
-                        if (erroreUpdate) throw erroreUpdate;
-                    } else {
-                        let { error: erroreInsert } = await clientSupabase
-                            .from('studenti')
-                            .insert([{ nickname: nicknameInput, casa: casaSelezionata, punti: nuoviPunti }]);
-                        if (erroreInsert) throw erroreInsert;
-                    }
-
-                    let simbolo = puntiDaAggiungere >= 0 ? "🟢" : "🔴";
-                    let action = puntiDaAggiungere >= 0 ? "guadagnato" : "perso";
-                    let casaFormattata = casaSelezionata.charAt(0).toUpperCase() + casaSelezionata.slice(1);
-                    let messaggioFinale = `${simbolo} <b>${casaFormattata}:</b> ${nicknameInput} ha ${action} ${Math.abs(puntiDaAggiungere)} punti. <i>${motivoTesto}</i>`;
-
-                    let { error: erroreCronologia } = await clientSupabase
-                        .from('cronologia')
-                        .insert([{ messaggio: messaggioFinale }]);
-                    if (erroreCronologia) throw erroreCronologia;
-
-                    alert(`Decreto Inviato! Punti aggiornati per ${nicknameInput}.`);
-                    document.getElementById('nickname').value = ""; 
-                    document.getElementById('punti').value = ""; 
-                    document.getElementById('motivo').value = "";
-
-                } catch (error) {
-                    alert("ERRORE DI DATABASE: " + (error.message || JSON.stringify(error)));
-                    console.error(error);
+                        .update({ punti: nuoviPunti })
+                        .eq('nickname', nicknameInput);
+                    if (erroreUpdate) throw erroreUpdate;
+                } else {
+                    let { error: erroreInsert } = await clientSupabase
+                        .from('studenti')
+                        .insert([{ nickname: nicknameInput, casa: casaSelezionata, punti: nuoviPunti }]);
+                    if (erroreInsert) throw erroreInsert;
                 }
-            };
+
+                let simbolo = puntiDaAggiungere >= 0 ? "🟢" : "🔴";
+                let action = puntiDaAggiungere >= 0 ? "guadagnato" : "perso";
+                let casaFormattata = casaSelezionata.charAt(0).toUpperCase() + casaSelezionata.slice(1);
+                let messaggioFinale = `${simbolo} <b>${casaFormattata}:</b> ${nicknameInput} ha ${action} ${Math.abs(puntiDaAggiungere)} punti. <i>${motivoTesto}</i>`;
+
+                let { error: erroreCronologia } = await clientSupabase
+                    .from('cronologia')
+                    .insert([{ messaggio: messaggioFinale }]);
+                if (erroreCronologia) throw erroreCronologia;
+
+                alert(`Decreto Inviato! Punti aggiornati per ${nicknameInput}.`);
+                document.getElementById('nickname').value = ""; 
+                document.getElementById('punti').value = ""; 
+                document.getElementById('motivo').value = "";
+
+            } catch (error) {
+                alert("ERRORE DI DATABASE: " + (error.message || JSON.stringify(error)));
+                console.error(error);
+            }
         };
     </script>
 </body>

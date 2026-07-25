@@ -44,8 +44,8 @@
     </div>
 
     <script>
-        // URL E CHIAVE IN VERSIONE CORRETTA E INTEGRALE SENZA INTERRUZIONI
-        const SUPABASE_URL = "https://supabase.co";
+        // CORREZIONE: Inserito l'URL di base corretto con la P di supabase
+        const BASE_URL = "https://supabase.co";
         const SUPABASE_KEY = "sb_publishable_mA9sEGg7xeKy3mGB3KqLng_B4T4Bndy";
 
         document.getElementById("btnInvia").onclick = async function() {
@@ -67,31 +67,30 @@
             };
 
             try {
-                // 1. Lettura dello studente con l'indirizzo completo
-                const urlLettura = `${SUPABASE_URL}/studenti?nickname=eq.${encodeURIComponent(nicknameInput)}&select=*`;
+                // Lettura corretta senza raddoppiare le cartelle nell'indirizzo
+                const urlLettura = `${BASE_URL}/studenti?nickname=eq.${encodeURIComponent(nicknameInput)}&select=*`;
                 const resLettura = await fetch(urlLettura, { method: "GET", headers: headers });
                 
-                if (!resLettura.ok) throw new Error("Connessione fallita con le tabelle.");
+                if (!resLettura.ok) throw new Error("La tabella studenti non risponde.");
                 const datiStudente = await resLettura.json();
                 
                 let nuoviPunti = puntiDaAggiungere;
 
                 if (datiStudente && datiStudente.length > 0) {
                     nuoviPunti = datiStudente[0].punti + puntiDaAggiungere;
-                    const urlUpdate = `${SUPABASE_URL}/studenti?nickname=eq.${encodeURIComponent(nicknameInput)}`;
+                    const urlUpdate = `${BASE_URL}/studenti?nickname=eq.${encodeURIComponent(nicknameInput)}`;
                     await fetch(urlUpdate, { method: "PATCH", headers: headers, body: JSON.stringify({ punti: nuoviPunti }) });
                 } else {
-                    const urlInsert = `${SUPABASE_URL}/studenti`;
+                    const urlInsert = `${BASE_URL}/studenti`;
                     await fetch(urlInsert, { method: "POST", headers: headers, body: JSON.stringify([{ nickname: nicknameInput, casa: casaSelezionata, punti: nuoviPunti }]) });
                 }
 
-                // 2. Registrazione del messaggio nella cronologia
                 let simbolo = puntiDaAggiungere >= 0 ? "🟢" : "🔴";
                 let action = puntiDaAggiungere >= 0 ? "guadagnato" : "perso";
                 let casaFormattata = casaSelezionata.charAt(0).toUpperCase() + casaSelezionata.slice(1);
                 let messaggioFinale = `${simbolo} <b>${casaFormattata}:</b> ${nicknameInput} ha ${action} ${Math.abs(puntiDaAggiungere)} punti. <i>${motivoTesto}</i>`;
 
-                const urlCronologia = `${SUPABASE_URL}/cronologia`;
+                const urlCronologia = `${BASE_URL}/cronologia`;
                 await fetch(urlCronologia, { method: "POST", headers: headers, body: JSON.stringify([{ messaggio: messaggioFinale }]) });
 
                 alert(`Decreto Inviato! Punti aggiornati per ${nicknameInput}.`);

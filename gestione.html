@@ -44,55 +44,8 @@
     </div>
 
     <script>
-        // LIBRERIA SUPABASE INTEGRATA E ADATTATA INTERNAMENTE SENZA RETE
-        const supabase = {
-            createClient: function(url, key) {
-                return {
-                    from: function(table) {
-                        return {
-                            select: function() {
-                                return {
-                                    eq: function(col, val) {
-                                        return {
-                                            maybeSingle: async function() {
-                                                const res = await fetch(`${url}/rest/v1/${table}?${col}=eq.${encodeURIComponent(val)}&select=*`, {
-                                                    headers: { "apikey": key, "Authorization": `Bearer ${key}` }
-                                                });
-                                                const data = await res.json();
-                                                return { data: data.length ? data[0] : null, error: null };
-                                            }
-                                        };
-                                    }
-                                };
-                            },
-                            update: function(obj) {
-                                return {
-                                    eq: function(col, val) {
-                                        return fetch(`${url}/rest/v1/${table}?${col}=eq.${encodeURIComponent(val)}`, {
-                                            method: "PATCH",
-                                            headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json", "Prefer": "return=representation" },
-                                            body: JSON.stringify(obj)
-                                        });
-                                    }
-                                };
-                            },
-                            insert: function(arr) {
-                                return fetch(`${url}/rest/v1/${table}`, {
-                                    method: "POST",
-                                    headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json", "Prefer": "return=representation" },
-                                    body: JSON.stringify(arr)
-                                });
-                            }
-                        };
-                    }
-                };
-            }
-        };
-
-        // CONNESSIONE DIRETTA AL TUO DATABASE
         const SUPABASE_URL = "https://supabase.co";
         const SUPABASE_KEY = "sb_publishable_mA9sEGg7xeKy3mGB3KqLng_B4T4Bndy";
-        const clientSupabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         document.getElementById("btnInvia").onclick = async function() {
             const nicknameInput = document.getElementById('nickname').value.trim();
@@ -105,33 +58,43 @@
                 return;
             }
 
-            try {
-                let { data: studenteEsistente } = await clientSupabase
-                    .from('studenti')
-                    .select()
-                    .eq('nickname', nicknameInput)
-                    .maybeSingle();
+            // Intestazioni di sicurezza richieste da Supabase per evitare l'errore CORS
+            const headers =\ {
+                "apikey": SUPABASE_KEY,
+                "Authorization": `Bearer ${SUPABASE_KEY}`,
+                "Content-Type": "application/json",
+                "Prefer": "return=representation"
+            };
 
+            try {
+                // 1. Cerchiamo lo studente nel database
+                const urlLettura = `${SUPABASE_URL}/rest/v1/studenti?nickname=eq.${encodeURIComponent(nicknameInput)}&select=*`;
+                const resLettura = await fetch(urlLettura, { method: "GET", headers: headers });
+                
+                if (!resLettura.ok) throw new Error("Errore durante la lettura dello studente.");
+                const datiStudente = await resLettura.json();
+                
                 let nuoviPunti = puntiDaAggiungere;
 
-                if (studenteEsistente) {
-                    nuoviPunti = studenteEsistente.punti + puntiDaAggiungere;
-                    await clientSupabase
-                        .from('studenti')
-                        .update({ punti: nuoviPunti })
-                        .eq('nickname', nicknameInput);
+                if (datiStudente && datiStudente.length > 0) {
+                    // Se esiste, aggiorna i suoi punti
+                    nuoviPunti = datiStudente[0].punti + puntiDaAggiungere;
+                    const urlUpdate = `${SUPABASE_URL}/rest/v1/studenti?nickname=eq.${encodeURIComponent(nicknameInput)}`;
+                    await fetch(urlUpdate, { method: "PATCH", headers: headers, body: JSON.stringify({ punti: nuoviPunti }) });
                 } else {
-                    await clientSupabase
-                        .from('studenti')
-                        .insert([{ nickname: nicknameInput, casa: casaSelezionata, punti: nuoviPunti }]);
+                    // Se non esiste, lo inserisce da zero
+                    const urlInsert = `${SUPABASE_URL}/rest/v1/studenti`;
+                    await fetch(urlInsert, { method: "POST", headers: headers, body: JSON.stringify([{ nickname: nicknameInput, casa: casaSelezionata, punti: nuoviPunti }]) });
                 }
 
+                // 2. Costruiamo e inviamo il messaggio per la cronologia
                 let simbolo = puntiDaAggiungere >= 0 ? "🟢" : "🔴";
                 let action = puntiDaAggiungere >= 0 ? "guadagnato" : "perso";
                 let casaFormattata = casaSelezionata.charAt(0).toUpperCase() + casaSelezionata.slice(1);
                 let messaggioFinale = `${simbolo} <b>${casaFormattata}:</b> ${nicknameInput} ha ${action} ${Math.abs(puntiDaAggiungere)} punti. <i>${motivoTesto}</i>`;
 
-                await clientSupabase.from('cronologia').insert([{ messaggio: messaggioFinale }]);
+                const urlCronologia = `${SUPABASE_URL}/rest/v1/cronologia`;
+                await fetch(urlCronologia, { method: "POST", headers: headers, body: JSON.stringify([{ messaggio: messaggioFinale }]) });
 
                 alert(`Decreto Inviato! Punti aggiornati per ${nicknameInput}.`);
                 document.getElementById('nickname').value = ""; 

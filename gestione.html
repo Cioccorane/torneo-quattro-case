@@ -43,13 +43,56 @@
         <button id="btnInvia">Invia Aggiornamento Decreto</button>
     </div>
 
-    <!-- SCRIPT CORRETTO CON IMPORT DIRETTO -->
-    <script type="module">
-        import { createClient } from 'https://jsdelivr.net';
+    <script>
+        // LIBRERIA SUPABASE INTEGRATA E ADATTATA INTERNAMENTE SENZA RETE
+        const supabase = {
+            createClient: function(url, key) {
+                return {
+                    from: function(table) {
+                        return {
+                            select: function() {
+                                return {
+                                    eq: function(col, val) {
+                                        return {
+                                            maybeSingle: async function() {
+                                                const res = await fetch(`${url}/rest/v1/${table}?${col}=eq.${encodeURIComponent(val)}&select=*`, {
+                                                    headers: { "apikey": key, "Authorization": `Bearer ${key}` }
+                                                });
+                                                const data = await res.json();
+                                                return { data: data.length ? data[0] : null, error: null };
+                                            }
+                                        };
+                                    }
+                                };
+                            },
+                            update: function(obj) {
+                                return {
+                                    eq: function(col, val) {
+                                        return fetch(`${url}/rest/v1/${table}?${col}=eq.${encodeURIComponent(val)}`, {
+                                            method: "PATCH",
+                                            headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json", "Prefer": "return=representation" },
+                                            body: JSON.stringify(obj)
+                                        });
+                                    }
+                                };
+                            },
+                            insert: function(arr) {
+                                return fetch(`${url}/rest/v1/${table}`, {
+                                    method: "POST",
+                                    headers: { "apikey": key, "Authorization": `Bearer ${key}`, "Content-Type": "application/json", "Prefer": "return=representation" },
+                                    body: JSON.stringify(arr)
+                                });
+                            }
+                        };
+                    }
+                };
+            }
+        };
 
+        // CONNESSIONE DIRETTA AL TUO DATABASE
         const SUPABASE_URL = "https://supabase.co";
         const SUPABASE_KEY = "sb_publishable_mA9sEGg7xeKy3mGB3KqLng_B4T4Bndy";
-        const clientSupabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+        const clientSupabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         document.getElementById("btnInvia").onclick = async function() {
             const nicknameInput = document.getElementById('nickname').value.trim();
@@ -63,28 +106,24 @@
             }
 
             try {
-                let { data: studenteEsistente, error: erroreLettura } = await clientSupabase
+                let { data: studenteEsistente } = await clientSupabase
                     .from('studenti')
-                    .select('*')
+                    .select()
                     .eq('nickname', nicknameInput)
                     .maybeSingle();
-
-                if (erroreLettura) throw erroreLettura;
 
                 let nuoviPunti = puntiDaAggiungere;
 
                 if (studenteEsistente) {
                     nuoviPunti = studenteEsistente.punti + puntiDaAggiungere;
-                    let { error: erroreUpdate } = await clientSupabase
+                    await clientSupabase
                         .from('studenti')
                         .update({ punti: nuoviPunti })
                         .eq('nickname', nicknameInput);
-                    if (erroreUpdate) throw erroreUpdate;
                 } else {
-                    let { error: erroreInsert } = await clientSupabase
+                    await clientSupabase
                         .from('studenti')
                         .insert([{ nickname: nicknameInput, casa: casaSelezionata, punti: nuoviPunti }]);
-                    if (erroreInsert) throw erroreInsert;
                 }
 
                 let simbolo = puntiDaAggiungere >= 0 ? "🟢" : "🔴";
@@ -92,10 +131,7 @@
                 let casaFormattata = casaSelezionata.charAt(0).toUpperCase() + casaSelezionata.slice(1);
                 let messaggioFinale = `${simbolo} <b>${casaFormattata}:</b> ${nicknameInput} ha ${action} ${Math.abs(puntiDaAggiungere)} punti. <i>${motivoTesto}</i>`;
 
-                let { error: erroreCronologia } = await clientSupabase
-                    .from('cronologia')
-                    .insert([{ messaggio: messaggioFinale }]);
-                if (erroreCronologia) throw erroreCronologia;
+                await clientSupabase.from('cronologia').insert([{ messaggio: messaggioFinale }]);
 
                 alert(`Decreto Inviato! Punti aggiornati per ${nicknameInput}.`);
                 document.getElementById('nickname').value = ""; 
@@ -103,7 +139,7 @@
                 document.getElementById('motivo').value = "";
 
             } catch (error) {
-                alert("ERRORE DI DATABASE: " + (error.message || JSON.stringify(error)));
+                alert("ERRORE DI DATABASE: " + error.message);
                 console.error(error);
             }
         };

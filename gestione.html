@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stanza del Preside - Gestione Punti</title>
-    <!-- LIBRERIA CARICATA IN ALTO CON METODO SICURO -->
+    <!-- LIBRERIA CLOUDFLARE SICURA -->
     <script src="https://cloudflare.com"></script>
     <style>
         body { background-color: #1a120b; color: #f5edd8; font-family: 'Georgia', serif; text-align: center; padding: 20px; }
@@ -46,13 +46,12 @@
     </div>
 
     <script>
-        // IL SITO ASPETTA CHE LA LIBRERIA SIA ATTIVA AL 100% PRIMA DI AVVIARE IL CODICE
         window.onload = function() {
             const SUPABASE_URL = "https://supabase.co";
             const SUPABASE_KEY = "sb_publishable_mA9sEGg7xeKy3mGB3KqLng_B4T4Bndy";
             
-            // Creazione corretta del client ufficiale
-            const clientSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            // CORREZIONE: Rimossa la parola window per allinearsi a cdnjs
+            const clientSupabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
             document.getElementById("btnInvia").onclick = async function() {
                 const nicknameInput = document.getElementById('nickname').value.trim();
@@ -91,9 +90,9 @@
                     }
 
                     let simbolo = puntiDaAggiungere >= 0 ? "🟢" : "🔴";
-                    let azione = puntiDaAggiungere >= 0 ? "guadagnato" : "perso";
+                    let action = puntiDaAggiungere >= 0 ? "guadagnato" : "perso";
                     let casaFormattata = casaSelezionata.charAt(0).toUpperCase() + casaSelezionata.slice(1);
-                    let messaggioFinale = `${simbolo} <b>${casaFormattata}:</b> ${nicknameInput} ha ${azione} ${Math.abs(puntiDaAggiungere)} punti. <i>${motivoTesto}</i>`;
+                    let messaggioFinale = `${simbolo} <b>${casaFormattata}:</b> ${nicknameInput} ha ${action} ${Math.abs(puntiDaAggiungere)} punti. <i>${motivoTesto}</i>`;
 
                     let { error: erroreCronologia } = await clientSupabase
                         .from('cronologia')

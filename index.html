@@ -54,7 +54,7 @@
         async function caricaDatiTorneo() {
             let { data: studenti, error } = await supabase.from('studenti').select('*').order('punti', { ascending: false });
             if (error) return console.error(error);
-            let puntiCase = { grifondoro: 10, serpeverde: 0, corvonero: 0, tassorosso: 0 };
+            let puntiCase = { grifondoro: 0, serpeverde: 0, corvonero: 0, tassorosso: 0 };
             document.getElementById('studenti-grifondoro').innerHTML = ""; document.getElementById('studenti-serpeverde').innerHTML = ""; document.getElementById('studenti-corvonero').innerHTML = ""; document.getElementById('studenti-tassorosso').innerHTML = "";
             studenti.forEach(studente => {
                 let casaInMinuscolo = studente.casa.toLowerCase(); puntiCase[casaInMinuscolo] += studente.punti;
